@@ -6,6 +6,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
 # Runtime data
 pids
@@ -18,6 +19,7 @@ lib-cov
 
 # Coverage directory used by tools like istanbul
 coverage
+*.lcov
 
 # nyc test coverage
 .nyc_output
@@ -41,11 +43,17 @@ jspm_packages/
 # TypeScript v1 declaration files
 typings/
 
+# TypeScript cache
+*.tsbuildinfo
+
 # Optional npm cache directory
 .npm
 
 # Optional eslint cache
 .eslintcache
+
+# Optional stylelint cache
+.stylelintcache
 
 # Optional REPL history
 .node_repl_history
@@ -58,12 +66,19 @@ typings/
 
 # dotenv environment variables file
 .env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
+.parcel-cache
 
 # next.js build output
 .next
+out
 
 # nuxt.js build output
 .nuxt
@@ -77,14 +92,121 @@ dist
 # Serverless directories
 .serverless
 
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
 # IDE / Editor
 .idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
 
 # Service worker
 sw.*
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
 # Vim swap files
 *.swp
+*.swo
+*.swn
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Application specific
+# Uploaded files (商品画像など - ローカルアップロード分のみ)
+/static/uploads/*
+/uploads/*
+# サンプル画像は含める場合は以下を追加
+# !/static/uploads/.gitkeep
+# !/static/uploads/samples/
+
+# Storage (Laravel storage構造の場合)
+/storage/app/public/images/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+
+# Local database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Stripe関連
+# Stripe CLIの設定ファイル
+.stripe/
+
+# Payment test data
+/tests/fixtures/payment_test_data.json
+
+# Mailhog / メール関連
+# ローカルメールデータ
+/mailhog-data/
+*.eml
+
+# Test files
+/test-results/
+/playwright-report/
+/coverage/
+
+# Environment specific
+.npmrc.local
+
+# Secrets / 機密情報
+# 各種APIキー、シークレットを含むファイル
+secrets.json
+credentials.json
+service-account-key.json
+
+# Backup files
+*.backup
+backup/
