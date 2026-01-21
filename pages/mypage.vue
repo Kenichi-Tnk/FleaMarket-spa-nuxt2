@@ -134,26 +134,29 @@ export default {
     },
 
     methods: {
-        getImageUrl,
+        getImageUrl(path) {
+            return getImageUrl(path, this.$config.apiBaseUrl.replace('/api', ''))
+        },
 
         async fetchUserAndItems() {
             this.loading = true
 
             try {
-                // 本番環境では実際のAPIを呼び出す
-                // const [userResponse, itemsResponse] = await Promise.all([
-                //   this.$axios.get('/user'),
-                //   this.$axios.get(`/mypage/items?type=${this.currentTab}`),
-                // ])
-                // this.user = userResponse.data.user
-                // this.items = itemsResponse.data.items
-
-                // ダミーデータ
-                await new Promise(resolve => setTimeout(resolve, 500))
-                this.user = this.getDummyUser()
-                this.items = this.getDummyItems()
+                // 認証チェック
+                await this.$store.dispatch('auth/checkAuth')
+                
+                // ユーザー情報を取得
+                const user = this.$store.state.auth.user
+                if (user) {
+                    this.user = user
+                }
+                
+                // 商品一覧を取得
+                await this.fetchItems()
             } catch (error) {
                 console.error('データ取得エラー:', error)
+                // エラー時はログインページにリダイレクト
+                this.$router.push('/login')
             } finally {
                 this.loading = false
             }
@@ -161,15 +164,23 @@ export default {
 
         async fetchItems() {
             try {
-                // 本番環境では実際のAPIを呼び出す
-                // const response = await this.$axios.get(`/mypage/items?type=${this.currentTab}`)
-                // this.items = response.data.items
-
-                // ダミーデータ
-                await new Promise(resolve => setTimeout(resolve, 300))
-                this.items = this.getDummyItems()
+                if (this.currentTab === 'sell') {
+                    // 出品した商品を取得
+                    const response = await this.$axios.get('/items', {
+                        params: {
+                            user_id: this.user.id,
+                            my_items: true
+                        }
+                    })
+                    this.items = response.data.data || []
+                } else {
+                    // 購入した商品を取得
+                    const response = await this.$axios.get('/purchases')
+                    this.items = response.data.data ? response.data.data.map(purchase => purchase.item) : []
+                }
             } catch (error) {
                 console.error('商品取得エラー:', error)
+                this.items = []
             }
         },
 

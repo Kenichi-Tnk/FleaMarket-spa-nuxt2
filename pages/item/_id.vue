@@ -74,7 +74,7 @@
                         <!-- 商品説明 -->
                         <div class="item-description">
                             <h2 class="description-title">商品説明</h2>
-                            <p class="description-text">{{ item.description }}</p>
+                            <p class="description-text" style="white-space: pre-line;">{{ item.description }}</p>
                         </div>
 
                         <!-- 商品の情報 -->
@@ -89,8 +89,8 @@
                                     <th class="meta-label">カテゴリー</th>
                                     <td class="meta-value">
                                         <ul v-if="item.categories && item.categories.length" class="category-list">
-                                            <li v-for="category in item.categories" :key="category" class="category-item">
-                                                {{ category }}
+                                            <li v-for="category in item.categories" :key="category.id" class="category-item">
+                                                {{ category.name }}
                                             </li>
                                         </ul>
                                         <span v-else>未設定</span>
@@ -98,7 +98,7 @@
                                 </tr>
                                 <tr class="meta-item">
                                     <th class="meta-label">商品の状態</th>
-                                    <td class="meta-value">{{ item.condition || '未設定' }}</td>
+                                    <td class="meta-value">{{ item.condition ? item.condition.name : '未設定' }}</td>
                                 </tr>
                             </table>
                         </div>
@@ -204,6 +204,8 @@ export default {
     },
 
     async mounted() {
+        // 認証状態の確認を待ってから商品詳細を取得
+        await this.$store.dispatch('auth/checkAuth')
         await this.fetchItemDetail()
     },
 
@@ -224,108 +226,28 @@ export default {
             try {
                 const itemId = this.$route.params.id
 
-                // 本番環境では実際のAPIを呼び出す
-                // const response = await this.$axios.get(`/items/${itemId}`)
-                // this.item = response.data.item
-                // this.comments = response.data.comments || []
-                // this.isFavorited = response.data.is_favorited || false
-                // this.favoriteCount = response.data.favorite_count || 0
+                // 商品詳細を取得
+                const itemResult = await this.$store.dispatch('items/fetchItem', itemId)
+                if (!itemResult.success) {
+                    throw new Error(itemResult.message)
+                }
+                this.item = itemResult.item
 
-                // ダミーデータ
-                await new Promise(resolve => setTimeout(resolve, 500))
-                this.item = this.getDummyItem(itemId)
-                this.comments = this.getDummyComments()
-                this.isFavorited = false
-                this.favoriteCount = Math.floor(Math.random() * 20)
+                // コメントを取得
+                const commentsResponse = await this.$axios.get(`/items/${itemId}/comments`)
+                this.comments = commentsResponse.data.comments || []
+
+                // お気に入り情報（認証済みの場合のみ）
+                if (this.isAuthenticated) {
+                    this.isFavorited = this.item.is_favorited || false
+                }
+                this.favoriteCount = this.item.favorites_count || 0
             } catch (error) {
                 console.error('商品詳細の取得に失敗しました:', error)
                 this.error = '商品詳細の取得に失敗しました'
             } finally {
                 this.loading = false
             }
-        },
-
-        getDummyItem(id) {
-            const items = [
-                {
-                    id: 1,
-                    name: 'Armani 高級腕時計',
-                    brand: 'Armani',
-                    price: 15000,
-                    description: '状態の良いArmaniの腕時計です。\n数回使用しましたが、目立った傷や汚れはありません。\nビジネスシーンでもカジュアルでも使える洗練されたデザインです。\n\n付属品：箱、保証書あり',
-                    img_url: 'images/items/Armani+Mens+Clock.jpg',
-                    categories: ['メンズ', '時計'],
-                    condition: '目立った傷や汚れなし',
-                    is_sold: false,
-                    seller: {
-                        id: 2,
-                        name: '田中太郎',
-                        avatar: null,
-                        items_count: 15,
-                    },
-                },
-                {
-                    id: 2,
-                    name: 'HDD ハードディスク 2TB',
-                    brand: null,
-                    price: 8000,
-                    description: '外付けHDD 2TBです。\n使用期間は約1年程度。\n動作確認済みで問題なく使用できます。\n\nデータ保存やバックアップにお使いください。',
-                    img_url: 'images/items/HDD+Hard+Disk.jpg',
-                    categories: ['家電', 'PC周辺機器'],
-                    condition: '良好',
-                    is_sold: false,
-                    seller: {
-                        id: 3,
-                        name: '佐藤花子',
-                        avatar: null,
-                        items_count: 8,
-                    },
-                },
-                {
-                    id: 3,
-                    name: '本革ビジネスシューズ',
-                    brand: null,
-                    price: 12000,
-                    description: '本革を使用した高品質なビジネスシューズです。\nサイズ：26.0cm\n\n数回着用しましたが、サイズが合わなかったため出品します。\nまだまだ綺麗な状態です。',
-                    img_url: 'images/items/Leather+Shoes+Product+Photo.jpg',
-                    categories: ['メンズ', '靴'],
-                    condition: '未使用に近い',
-                    is_sold: false,
-                    seller: {
-                        id: 4,
-                        name: '山田一郎',
-                        avatar: null,
-                        items_count: 3,
-                    },
-                },
-            ]
-
-            return items.find(item => item.id === parseInt(id)) || items[0]
-        },
-
-        getDummyComments() {
-            return [
-                {
-                    id: 1,
-                    content: '商品の状態について詳しく教えていただけますか？',
-                    user: {
-                        id: 5,
-                        name: '鈴木美咲',
-                        avatar: null,
-                    },
-                    created_at: '2026-01-10T10:30:00Z',
-                },
-                {
-                    id: 2,
-                    content: '状態は良好です。写真の通り、目立った傷はありません。',
-                    user: {
-                        id: 2,
-                        name: '田中太郎',
-                        avatar: null,
-                    },
-                    created_at: '2026-01-10T11:00:00Z',
-                },
-            ]
         },
 
         async toggleFavorite() {
@@ -335,11 +257,11 @@ export default {
             }
 
             try {
-                // 本番環境では実際のAPIを呼び出す
-                // await this.$axios.post(`/items/${this.item.id}/favorite`)
-
-                this.isFavorited = !this.isFavorited
-                this.favoriteCount += this.isFavorited ? 1 : -1
+                const result = await this.$store.dispatch('favorites/toggleFavorite', this.item.id)
+                if (result.success) {
+                    this.isFavorited = result.isFavorited
+                    this.favoriteCount += result.isFavorited ? 1 : -1
+                }
             } catch (error) {
                 console.error('お気に入り登録に失敗しました:', error)
             }
@@ -363,25 +285,14 @@ export default {
             this.commentSubmitting = true
 
             try {
-                // 本番環境では実際のAPIを呼び出す
-                // const response = await this.$axios.post(`/items/${this.item.id}/comments`, {
-                //   content: this.commentText,
-                // })
-                // this.comments.unshift(response.data.comment)
-
-                // ダミーデータ
-                const newComment = {
-                    id: Date.now(),
+                const response = await this.$axios.post(`/items/${this.item.id}/comments`, {
                     content: this.commentText,
-                    user: {
-                        id: this.$store.state.auth?.user?.id,
-                        name: this.$store.state.auth?.user?.name || 'あなた',
-                        avatar: this.$store.state.auth?.user?.avatar,
-                    },
-                    created_at: new Date().toISOString(),
+                })
+                
+                if (response.data.comment) {
+                    this.comments.unshift(response.data.comment)
+                    this.commentText = ''
                 }
-                this.comments.unshift(newComment)
-                this.commentText = ''
             } catch (error) {
                 console.error('コメントの投稿に失敗しました:', error)
                 alert('コメントの投稿に失敗しました')

@@ -11,6 +11,12 @@
 <script>
 export default {
   name: 'DefaultLayout',
+  async created() {
+    // アプリ起動時に一度だけ認証状態を復元
+    if (process.client && !this.$store.state.auth.user) {
+      await this.$store.dispatch('auth/checkAuth')
+    }
+  },
 }
 </script>
 

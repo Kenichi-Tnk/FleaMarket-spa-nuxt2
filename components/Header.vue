@@ -18,13 +18,20 @@
         >
           ログイン
         </nuxt-link>
-        <nuxt-link 
-          v-else
-          to="/mypage" 
-          class="nav-link"
-        >
-          マイページ
-        </nuxt-link>
+        <template v-else>
+          <nuxt-link 
+            to="/mypage" 
+            class="nav-link"
+          >
+            マイページ
+          </nuxt-link>
+          <button 
+            @click="handleLogout"
+            class="nav-link logout-btn"
+          >
+            ログアウト
+          </button>
+        </template>
         <nuxt-link to="/sell" class="nav-link">出品</nuxt-link>
       </nav>
     </div>
@@ -38,6 +45,16 @@ export default {
     isAuthenticated() {
       // 認証状態を管理するVuexストアと連携
       return this.$store.state.auth?.user !== null
+    },
+  },
+  methods: {
+    async handleLogout() {
+      try {
+        await this.$store.dispatch('auth/logout')
+        this.$router.push('/')
+      } catch (error) {
+        console.error('Logout error:', error)
+      }
     },
   },
 }
@@ -112,10 +129,16 @@ export default {
   cursor: pointer;
   font-size: 1rem;
   white-space: nowrap;
+  padding: 0;
+  font-family: inherit;
 }
 
 .nav-link:hover {
   color: #ccc;
+}
+
+.logout-btn {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {

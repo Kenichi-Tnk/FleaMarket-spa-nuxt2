@@ -47,6 +47,8 @@
 </template>
 
 <script>
+import { getImageUrl } from '~/utils/helpers'
+
 export default {
   name: 'IndexPage',
 
@@ -63,7 +65,6 @@ export default {
 
   data() {
     return {
-      items: [],
       currentTab: 'recommend',
       isLoading: false,
     }
@@ -73,16 +74,30 @@ export default {
     isAuthenticated() {
       return this.$store.getters['auth/isAuthenticated']
     },
+    items() {
+      if (this.currentTab === 'mylist') {
+        return this.$store.getters['favorites/favorites']
+      }
+      return this.$store.getters['items/items']
+    },
   },
 
   watch: {
     '$route.query'() {
       this.fetchItems()
     },
+    isAuthenticated(newVal, oldVal) {
+      // 認証状態が変更されたらマイリストタブの場合は再取得
+      if (newVal !== oldVal && this.currentTab === 'mylist') {
+        this.fetchItems()
+      }
+    },
   },
 
-  mounted() {
-    this.fetchItems()
+  async mounted() {
+    // 認証状態の確認を待ってから商品を取得
+    await this.$store.dispatch('auth/checkAuth')
+    await this.fetchItems()
   },
 
   methods: {
@@ -91,100 +106,29 @@ export default {
       this.isLoading = true
 
       try {
-        let endpoint = '/items'
-        
-        if (this.currentTab === 'mylist') {
-          endpoint = '/items/mylist'
-        }
-
-        // クエリパラメータがあれば追加
         const params = {}
+        
+        // 検索クエリがあれば追加
         if (this.$route.query.search) {
-          params.search = this.$route.query.search
+          params.keyword = this.$route.query.search
         }
 
-        const response = await this.$axios.get(endpoint, { params })
-        this.items = response.data.items || response.data
+        if (this.currentTab === 'mylist') {
+          // マイリスト（お気に入り）を取得
+          await this.$store.dispatch('favorites/fetchFavorites', params)
+        } else {
+          // おすすめ（全商品）を取得
+          await this.$store.dispatch('items/fetchItems', params)
+        }
       } catch (error) {
         console.error('Failed to fetch items:', error)
-        // エラー時はダミーデータを表示（開発用）
-        this.items = this.getDummyItems()
       } finally {
         this.isLoading = false
       }
     },
 
     getImageUrl(imgUrl) {
-      if (!imgUrl) return '/images/no-image.png'
-      if (imgUrl.startsWith('http')) return imgUrl
-      // static配下の画像を参照
-      return `/${imgUrl}`
-    },
-
-    // 開発用ダミーデータ
-    getDummyItems() {
-      return [
-        {
-          id: 1,
-          name: '腕時計',
-          img_url: 'images/items/Armani+Mens+Clock.jpg',
-          is_sold: false,
-        },
-        {
-          id: 2,
-          name: 'HDD',
-          img_url: 'images/items/HDD+Hard+Disk.jpg',
-          is_sold: true,
-        },
-        {
-          id: 3,
-          name: '玉ねぎ3束',
-          img_url: 'images/items/iLoveIMG+d.jpg',
-          is_sold: false,
-        },
-        {
-          id: 4,
-          name: '革靴',
-          img_url: 'images/items/Leather+Shoes+Product+Photo.jpg',
-          is_sold: false,
-        },
-        {
-          id: 5,
-          name: 'ノートPC',
-          img_url: 'images/items/Living+Room+Laptop.jpg',
-          is_sold: false,
-        },
-        {
-          id: 6,
-          name: 'マイク',
-          img_url: 'images/items/Music+Mic+4632231.jpg',
-          is_sold: false,
-        },
-        {
-          id: 7,
-          name: 'ショルダーバッグ',
-          img_url: 'images/items/Purse+fashion+pocket.jpg',
-          is_sold: false,
-        },
-        {
-          id: 8,
-          name: 'タンブラー',
-          img_url: 'images/items/Tumbler+souvenir.jpg',
-          is_sold: false,
-        },
-        {
-          id: 9,
-          name: 'コーヒーミル',
-          img_url: 'images/items/Waitress+with+Coffee+Grinder.jpg',
-          is_sold: false,
-        },
-        {
-          id: 10,
-          name: 'メイクアップセット',
-          img_url: 'images/items/外出メイクアップセット.jpg',
-          is_sold: false,
-        },
-      ]
+      return getImageUrl(imgUrl, this.$config.apiBaseUrl.replace('/api', ''))
     },
   },
 }

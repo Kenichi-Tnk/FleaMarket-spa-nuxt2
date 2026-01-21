@@ -53,25 +53,25 @@
             <div class="category-checkboxes">
               <div
                 v-for="category in categories"
-                :key="category"
+                :key="category.id"
                 class="category-item"
               >
                 <input
                   type="checkbox"
-                  :id="'category-' + category"
-                  :value="category"
-                  v-model="form.categories"
+                  :id="'category-' + category.id"
+                  :value="category.id"
+                  v-model="form.category_ids"
                   class="category-checkbox"
                 >
                 <label
-                  :for="'category-' + category"
+                  :for="'category-' + category.id"
                   class="category-label"
                 >
-                  {{ category }}
+                  {{ category.name }}
                 </label>
               </div>
             </div>
-            <span v-if="errors.categories" class="form-error">{{ errors.categories }}</span>
+            <span v-if="errors.category_ids" class="form-error">{{ errors.category_ids }}</span>
           </div>
 
           <!-- 商品の状態 -->
@@ -81,20 +81,20 @@
             </label>
             <select
               id="condition"
-              v-model="form.condition"
+              v-model="form.condition_id"
               class="form-control form-select"
-              :class="{ 'is-invalid': errors.condition }"
+              :class="{ 'is-invalid': errors.condition_id }"
             >
               <option value="" disabled selected>選択してください</option>
               <option
                 v-for="condition in conditions"
-                :key="condition"
-                :value="condition"
+                :key="condition.id"
+                :value="condition.id"
               >
-                {{ condition }}
+                {{ condition.name }}
               </option>
             </select>
-            <span v-if="errors.condition" class="form-error">{{ errors.condition }}</span>
+            <span v-if="errors.condition_id" class="form-error">{{ errors.condition_id }}</span>
           </div>
 
           <!-- ブランド名 -->
@@ -222,8 +222,8 @@ export default {
             name: '',
             brand: '',
             description: '',
-            categories: [],
-            condition: '',
+            category_ids: [],
+            condition_id: '',
             price: null,
             image: null,
         },
@@ -232,31 +232,24 @@ export default {
         errorMessage: '',
         successMessage: '',
         isSubmitting: false,
-        categories: [
-            'メンズ',
-            'レディース',
-            '家電',
-            'ファッション',
-            'コスメ',
-            '本',
-            'ゲーム',
-            'スポーツ',
-            'キッチン',
-            'ハンドメイド',
-            'おもちゃ',
-            'アクセサリー',
-            'ベビー・キッズ',
-            'その他',
-        ],
-        conditions: [
-            '新品、未使用',
-            '未使用に近い、良好',
-            '目立った傷や汚れなし',
-            'やや傷や汚れあり',
-            '傷や汚れあり',
-            '全体的に状態が悪い',
-        ],
         }
+    },
+
+    computed: {
+        categories() {
+            return this.$store.getters['items/categories']
+        },
+        conditions() {
+            return this.$store.getters['items/conditions']
+        },
+    },
+
+    async mounted() {
+        // カテゴリと状態を取得
+        await Promise.all([
+            this.$store.dispatch('items/fetchCategories'),
+            this.$store.dispatch('items/fetchConditions'),
+        ])
     },
 
     methods: {
@@ -306,12 +299,12 @@ export default {
             this.errors.description = '商品の説明を入力してください'
         }
 
-        if (this.form.categories.length === 0) {
-            this.errors.categories = 'カテゴリーを1つ以上選択してください'
+        if (this.form.category_ids.length === 0) {
+            this.errors.category_ids = 'カテゴリーを1つ以上選択してください'
         }
 
-        if (!this.form.condition) {
-            this.errors.condition = '商品の状態を選択してください'
+        if (!this.form.condition_id) {
+            this.errors.condition_id = '商品の状態を選択してください'
         }
 
         if (!this.form.price || this.form.price < 1) {
@@ -338,42 +331,33 @@ export default {
             formData.append('name', this.form.name)
             formData.append('brand', this.form.brand || '')
             formData.append('description', this.form.description)
-            formData.append('categories', JSON.stringify(this.form.categories))
-            formData.append('condition', this.form.condition)
             formData.append('price', this.form.price)
+            formData.append('condition_id', this.form.condition_id)
             formData.append('image', this.form.image)
+            
+            // カテゴリIDを個別に追加
+            this.form.category_ids.forEach((categoryId, index) => {
+                formData.append(`category_ids[${index}]`, categoryId)
+            })
 
-            // 本番環境では実際のAPIを呼び出す
-            // const response = await this.$axios.post('/items', formData, {
-            //   headers: {
-            //     'Content-Type': 'multipart/form-data',
-            //   },
-            // })
-
-            // ダミー処理
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            console.log('出品データ:', {
-            name: this.form.name,
-            brand: this.form.brand,
-            description: this.form.description,
-            categories: this.form.categories,
-            condition: this.form.condition,
-            price: this.form.price,
-            image: this.form.image.name,
+            // API呼び出し（multipart/form-dataで送信）
+            const response = await this.$axios.post('/items', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             })
 
             this.successMessage = '商品を出品しました'
-
-            // 成功後、少し待ってから商品一覧にリダイレクト
+            // 成功後、少し待ってから商品詳細ページにリダイレクト
             setTimeout(() => {
-            this.$router.push('/')
+                this.$router.push(`/item/${response.data.item.id}`)
             }, 1500)
         } catch (error) {
             console.error('商品出品エラー:', error)
             this.errorMessage = error.response?.data?.message || '商品の出品に失敗しました'
 
             if (error.response?.data?.errors) {
-            this.errors = error.response.data.errors
+                this.errors = error.response.data.errors
             }
         } finally {
             this.isSubmitting = false

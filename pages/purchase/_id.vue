@@ -191,59 +191,27 @@ export default {
       try {
         const itemId = this.$route.params.id
 
-        // 本番環境では実際のAPIを呼び出す
-        // const [itemResponse, addressResponse] = await Promise.all([
-        //   this.$axios.get(`/items/${itemId}`),
-        //   this.$axios.get('/user/address'),
-        // ])
-        // this.item = itemResponse.data.item
-        // this.address = addressResponse.data.address
+        // 商品情報を取得
+        const itemResult = await this.$store.dispatch('items/fetchItem', itemId)
+        if (!itemResult.success) {
+          throw new Error(itemResult.message)
+        }
+        this.item = itemResult.item
 
-        // ダミーデータ
-        await new Promise(resolve => setTimeout(resolve, 500))
-        this.item = this.getDummyItem(itemId)
-        this.address = this.getDummyAddress()
+        // 認証されている場合、ユーザー情報を取得
+        const user = this.$store.state.auth.user
+        if (user && user.profile) {
+          this.address = {
+            postal_code: user.profile.postal_code || '',
+            address: user.profile.address || '',
+            building: user.profile.building || '',
+          }
+        }
       } catch (error) {
         console.error('データ取得エラー:', error)
         this.error = 'データの取得に失敗しました'
       } finally {
         this.loading = false
-      }
-    },
-
-    getDummyItem(id) {
-      const items = [
-        {
-          id: 1,
-          name: 'Armani 高級腕時計',
-          brand: 'Armani',
-          price: 15000,
-          img_url: 'images/items/Armani+Mens+Clock.jpg',
-        },
-        {
-          id: 2,
-          name: 'HDD ハードディスク 2TB',
-          brand: null,
-          price: 8000,
-          img_url: 'images/items/HDD+Hard+Disk.jpg',
-        },
-        {
-          id: 3,
-          name: '本革ビジネスシューズ',
-          brand: null,
-          price: 12000,
-          img_url: 'images/items/Leather+Shoes+Product+Photo.jpg',
-        },
-      ]
-
-      return items.find(item => item.id === parseInt(id)) || items[0]
-    },
-
-    getDummyAddress() {
-      return {
-        postal_code: '123-4567',
-        address: '東京都渋谷区神宮前1-2-3',
-        building: 'サンプルマンション101',
       }
     },
 
@@ -267,30 +235,22 @@ export default {
       this.errorMessage = ''
 
       try {
-        // 本番環境では実際のAPIを呼び出す
-        // const response = await this.$axios.post(`/purchase/${this.item.id}`, {
-        //   payment_method: this.paymentMethod,
-        // })
-
-        // カード払いの場合はStripe決済処理
-        // if (this.paymentMethod === 'card') {
-        //   // Stripe決済処理
-        // }
-
-        // ダミー処理
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        console.log('購入処理:', {
-          item_id: this.item.id,
-          payment_method: this.paymentMethod,
-          address: this.address,
+        // 購入APIを呼び出す
+        const result = await this.$store.dispatch('purchases/createPurchase', {
+          itemId: this.item.id,
+          paymentMethod: this.paymentMethod,
         })
 
-        // 購入完了後、完了ページまたはマイページに遷移
-        alert('購入が完了しました')
-        this.$router.push('/')
+        if (result.success) {
+          // 購入完了後、マイページまたはホームに遷移
+          alert('購入が完了しました')
+          this.$router.push('/mypage')
+        } else {
+          this.errorMessage = result.message || '購入処理に失敗しました'
+        }
       } catch (error) {
         console.error('購入エラー:', error)
-        this.errorMessage = error.response?.data?.message || '購入処理に失敗しました'
+        this.errorMessage = error.response?.data?.error || '購入処理に失敗しました'
       } finally {
         this.isPurchasing = false
       }

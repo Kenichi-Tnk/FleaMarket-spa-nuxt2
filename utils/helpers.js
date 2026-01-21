@@ -86,13 +86,20 @@ export function isValidPassword(password) {
 /**
  * 画像URLの生成（相対パスを絶対URLに変換）
  * @param {String} path - 画像のパス
- * @param {String} baseUrl - ベースURL
+ * @param {String} apiBaseUrl - APIのベースURL（オプション）
  * @returns {String} 完全なURL
  */
-export function getImageUrl(path, baseUrl = process.env.API_BASE_URL) {
-  if (!path) return ''
+export function getImageUrl(path, apiBaseUrl = 'http://localhost:8000') {
+  if (!path) return '/images/no-image.png'
   if (path.startsWith('http')) return path
-  return `${baseUrl}${path}`
+  
+  // storage/app/public/ からのパス（uploads/で始まる）の場合
+  if (path.startsWith('uploads/')) {
+    return `${apiBaseUrl}/storage/${path}`
+  }
+  
+  // static/配下の画像を参照（先頭に/を追加）
+  return path.startsWith('/') ? path : `/${path}`
 }
 
 /**

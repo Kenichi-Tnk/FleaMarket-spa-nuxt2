@@ -158,16 +158,32 @@ export default {
     const user = this.$store.state.auth?.user
     if (user) {
       this.form.name = user.name || ''
-      this.form.postal_code = user.postal_code || ''
-      this.form.address = user.address || ''
-      this.form.building = user.building || ''
-      if (user.profile_image) {
-        this.previewImage = user.profile_image
+      
+      // プロフィール情報から取得
+      if (user.profile) {
+        this.form.postal_code = user.profile.postal_code || ''
+        this.form.address = user.profile.address || ''
+        this.form.building = user.profile.building || ''
+        
+        if (user.profile.img_url) {
+          // storage/app/public/からのパスを変換
+          this.previewImage = this.getImageUrl(user.profile.img_url)
+        }
       }
     }
   },
 
   methods: {
+    // 画像URLを取得
+    getImageUrl(imgUrl) {
+      if (!imgUrl) return null
+      if (imgUrl.startsWith('http')) return imgUrl
+      // storage配下の画像を参照
+      if (imgUrl.startsWith('uploads/')) {
+        return `${this.$config.apiBaseUrl.replace('/api', '')}/storage/${imgUrl}`
+      }
+      return imgUrl
+    },
     // 画像選択ハンドラ
     handleImageSelect(event) {
       const file = event.target.files[0]
